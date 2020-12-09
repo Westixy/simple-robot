@@ -6,8 +6,6 @@ use std::str::FromStr;
 pub enum Action {
   /// Put robot on the field
   PLACE(Position, Direction),
-  /// Show current status of robot
-  REPORT,
   NeedRobot(RobotRequiredAction),
 }
 
@@ -21,7 +19,7 @@ impl FromStr for Action {
       "MOVE" => Ok(Action::NeedRobot(RobotRequiredAction::MOVE)),
       "LEFT" => Ok(Action::NeedRobot(RobotRequiredAction::LEFT)),
       "RIGHT" => Ok(Action::NeedRobot(RobotRequiredAction::RIGHT)),
-      "REPORT" => Ok(Action::REPORT),
+      "REPORT" => Ok(Action::NeedRobot(RobotRequiredAction::REPORT)),
       _ => {
         if let Some(cap) = place_regex.captures(val) {
           Ok(Action::PLACE(
@@ -49,6 +47,8 @@ pub enum RobotRequiredAction {
   LEFT,
   /// rotate right
   RIGHT,
+  /// Show current status of robot
+  REPORT,
 }
 
 #[cfg(test)]
@@ -93,7 +93,7 @@ mod test {
   #[test]
   fn parse_report() {
     let action: Action = "REPORT".parse().unwrap();
-    assert_eq!(action, Action::REPORT)
+    assert_eq!(action, Action::NeedRobot(RobotRequiredAction::REPORT))
   }
 
   #[test]

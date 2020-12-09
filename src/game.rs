@@ -8,7 +8,7 @@ pub struct Game {
 
 impl Game {
   /// Execute an action for the robot
-  pub fn execute(&mut self, action: Action) -> Result<String, RobotError> {
+  fn execute(&mut self, action: Action) -> Result<String, RobotError> {
     use Action::*;
     let mut res = String::new();
     match action {
@@ -29,16 +29,10 @@ impl Game {
             MOVE => robot.move_it(&self.field)?,
             LEFT => robot.direction = robot.direction.get_left(),
             RIGHT => robot.direction = robot.direction.get_right(),
+            REPORT => res = format!("{}\n", robot.report()),
           }
         } else {
           return Err(RobotError::RobotNotInField);
-        }
-      }
-      REPORT => {
-        if let Some(robot) = &self.robot {
-          res = format!("{}\n", robot.report())
-        } else {
-          res = format!("Robot not in field\n");
         }
       }
     }
@@ -50,7 +44,12 @@ impl Game {
     let mut res = String::new();
     for line in lines.split("\n") {
       let action = line.parse::<Action>()?;
-      res = format!("{}{}", res, self.execute(action)?);
+      match self.execute(action) {
+        Ok(action_result) => res = format!("{}{}", res, action_result),
+        Err(RobotError::RobotNotInField) => (),
+        Err(RobotError::RobotOutOfField) => (),
+        Err(error) => return Err(error),
+      }
     }
     Ok(res)
   }
@@ -77,7 +76,7 @@ mod tests {
     let mut game = new_game();
     let pos = Position { x: 0, y: 0 };
     let dir = Direction::NORTH;
-    game.execute(Action::PLACE(pos, dir)).expect("");
+    game.execute(Action::PLACE(pos, dir)).unwrap();
     let robot = game.robot.unwrap();
     assert_eq!(robot.direction, Direction::NORTH);
     assert_eq!(robot.position, Position { x: 0, y: 0 });
@@ -101,8 +100,8 @@ mod tests {
     let res = game
       .execute_all(
         "PLACE 0,0,NORTH
-            MOVE
-            REPORT",
+         MOVE
+         REPORT",
       )
       .unwrap();
     assert_eq!(res, "0,1,NORTH\n");
@@ -114,8 +113,8 @@ mod tests {
     let res = game
       .execute_all(
         "PLACE 0,0,NORTH
-            LEFT
-            REPORT",
+         LEFT
+         REPORT",
       )
       .unwrap();
     assert_eq!(res, "0,0,WEST\n");
@@ -127,45 +126,66 @@ mod tests {
     let res = game
       .execute_all(
         "PLACE 1,2,EAST
-            MOVE
-            MOVE
-            LEFT
-            MOVE
-            REPORT",
+         MOVE
+         MOVE
+         LEFT
+         MOVE
+         REPORT",
       )
       .unwrap();
     assert_eq!(res, "3,3,NORTH\n");
   }
 
   #[test]
-  #[should_panic]
-  fn should_go_out_of_field() {
+  fn actions_before_place() {
     let mut game = new_game();
-    game
+    let res = game
       .execute_all(
-        "PLACE 1,2,EAST
-            MOVE
-            MOVE
-            MOVE
-            MOVE
-            MOVE
-            LEFT
-            MOVE
-            REPORT",
+        "MOVE
+         LEFT
+         REPORT
+         RIGHT
+         PLACE 1,2,EAST
+         MOVE
+         MOVE
+         LEFT
+         MOVE
+         REPORT",
       )
       .unwrap();
+    assert_eq!(res, "3,3,NORTH\n");
   }
 
   #[test]
-  #[should_panic]
-  fn should_fail_move_before_place() {
+  fn double_place() {
     let mut game = new_game();
-    game
+    let res = game
       .execute_all(
-        "MOVE
-            PLACE 1,2,EAST
-            REPORT",
+        "PLACE 1,2,EAST
+         MOVE
+         PLACE 3,3,NORTH
+         REPORT",
       )
       .unwrap();
+    assert_eq!(res, "3,3,NORTH\n");
+  }
+
+  #[test]
+  fn should_go_out_of_field_and_ignore_actions() {
+    let mut game = new_game();
+    let res = game
+      .execute_all(
+        "PLACE 1,2,EAST
+         MOVE
+         PLACE 6,2,EAST
+         MOVE
+         MOVE
+         MOVE
+         MOVE
+         MOVE
+         REPORT",
+      )
+      .unwrap();
+    assert_eq!(res, "4,2,EAST\n");
   }
 }
