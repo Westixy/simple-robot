@@ -14,21 +14,16 @@ Description
 
 System requirements
 -------------------
-- JDK 11
-- Maven
+- rust 1.48.0
 
 Build with
 ----------
-    mvn clean install
+- cargo build
 
 
 Running locally
 ---------------
-    java -jar toy-robot-simulator-1.0-SNAPSHOT.jar <file path>
-
-Example:
-
-    java -jar toy-robot-simulator-1.0-SNAPSHOT.jar C:\DevApplications\toy-robot-simulator\src\test\resources\example_c
+- cargo test
 
 Rules
 -----
